@@ -9,7 +9,7 @@
           <q-icon
             class="header-icon q-pa-md lt-md"
             name="fa-brands fa-earlybirds"
-            size="lg"
+            size="md"
             color="primary"
           />
         </q-toolbar-title>
@@ -21,13 +21,13 @@
       v-model="leftDrawerOpen"
       side="left"
       bordered
-      width="283"
+      :width="283"
     >
       <!-- drawer content -->
       <q-icon
         class="q-pa-md"
         name="fa-brands fa-earlybirds"
-        size="lg"
+        size="md"
         color="primary"
       />
 
