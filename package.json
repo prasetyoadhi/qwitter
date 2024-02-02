@@ -13,6 +13,8 @@
     "build": "quasar build"
   },
   "dependencies": {
+    "@capacitor/cli": "^5.6.0",
+    "@capacitor/core": "^5.6.0",
     "@quasar/extras": "^1.16.4",
     "axios": "^1.2.1",
     "date-fns": "^3.3.1",

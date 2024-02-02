@@ -1,0 +1,8 @@
+{
+  "appId": "com.prasetyoadhi.qwitter",
+  "appName": "Qwitter",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
