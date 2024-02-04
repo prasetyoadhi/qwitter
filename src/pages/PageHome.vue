@@ -18,6 +18,14 @@
               </q-avatar>
             </template>
           </q-input>
+          <q-btn
+            color="grey"
+            size="sm"
+            icon="fa-solid fa-bell"
+            flat
+            round
+            @click="registerNotifications"
+          ></q-btn>
         </div>
         <div class="col col-shrink">
           <q-btn
@@ -118,15 +126,109 @@ import {
   where,
   orderBy,
   onSnapshot,
+  getDocs,
   addDoc,
   deleteDoc,
   updateDoc,
 } from "firebase/firestore";
+import { PushNotifications } from "@capacitor/push-notifications";
 
 export default defineComponent({
   name: "PageHome",
+  created() {
+    try {
+      console.log("creating pagehome");
+      if (!this.$q.platform.is.android) return;
+
+      this.addListeners = async () => {
+        // Listener untuk mendapatkan token registrasi
+        await PushNotifications.addListener("registration", async (token) => {
+          console.info("Registration token: ", token.value);
+
+          let newToken = {
+            email: this.email,
+            token: token.value,
+            date: Date.now(),
+          };
+
+          const docRef = await addDoc(collection(db, "tokens"), newToken);
+          console.log("Document written with ID: ", docRef.id);
+
+          this.pushToken = token.value;
+        });
+
+        // Listener untuk menangani kesalahan registrasi
+        await PushNotifications.addListener("registrationError", (err) => {
+          console.error("Registration error: ", err.error);
+        });
+
+        // Listener untuk menangani notifikasi yang diterima
+        await PushNotifications.addListener(
+          "pushNotificationReceived",
+          (notification) => {
+            console.log("Push notification received: ", notification);
+            this.notifications.push(notification);
+          }
+        );
+
+        // Listener untuk menangani tindakan yang dilakukan pada notifikasi
+        await PushNotifications.addListener(
+          "pushNotificationActionPerformed",
+          (notification) => {
+            console.log(
+              "Push notification action performed",
+              JSON.stringify(notification)
+            );
+
+            if (this.notifications.length > 0) {
+              // Memanggil fungsi untuk menambahkan qweet
+
+              this.newQweetContent =
+                this.notifications[this.notifications.length - 1].body;
+
+              this.addNewQweet();
+            }
+          }
+        );
+      };
+
+      this.registerNotifications = async () => {
+        console.log("register notification");
+
+        const q = query(
+          collection(db, "tokens"),
+          where("email", "==", this.email)
+        );
+        const querySnapshot = await getDocs(q);
+        const filteredData = querySnapshot.docs
+          .filter((doc) => doc.data().email === this.email)
+          .map((doc) => doc.data());
+
+        console.log(JSON.stringify(filteredData));
+        if (filteredData.length == 0) {
+          let permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === "prompt") {
+            permStatus = await PushNotifications.requestPermissions();
+          }
+          if (permStatus.receive !== "granted") {
+            throw new Error("User denied permissions!");
+          }
+          await PushNotifications.register();
+        } else {
+          this.pushToken = filteredData[0].token;
+        }
+      };
+
+      this.getDeliveredNotifications = async () => {
+        const notificationList =
+          await PushNotifications.getDeliveredNotifications();
+        console.log("delivered notifications", notificationList);
+      };
+    } catch (e) {}
+  },
   data() {
     return {
+      email: "adhiprst@gmail.com",
       newQweetContent: "",
       qweets: [
         // {
@@ -172,6 +274,11 @@ export default defineComponent({
         // },
       ],
       unsubscribe: null,
+      unsubscribeTokens: null,
+      registerNotifications: null,
+      addListeners: null,
+      pushToken: "",
+      notifications: [],
     };
   },
   methods: {
@@ -237,6 +344,11 @@ export default defineComponent({
         }
       });
     });
+
+    // push notif
+    if (!this.$q.platform.is.android) return;
+
+    this.addListeners();
   },
   unmounted() {
     console.log("unmounted");

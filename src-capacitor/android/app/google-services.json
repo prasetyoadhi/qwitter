@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "65833096972",
+    "project_id": "qwitter-c4e47",
+    "storage_bucket": "qwitter-c4e47.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65833096972:android:b72a1ef342dadef61c5b29",
+        "android_client_info": {
+          "package_name": "com.prasetyoadhi.qwitter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2yGHc7UMgYHjo2tVojlB7Vs6-wrjXRVo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

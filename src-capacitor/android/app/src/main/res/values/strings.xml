@@ -4,4 +4,5 @@
     <string name="title_activity_main">Qwitter</string>
     <string name="package_name">com.prasetyoadhi.qwitter</string>
     <string name="custom_url_scheme">com.prasetyoadhi.qwitter</string>
+    <string name="default_notification_channel_id">your_channel_id</string>
 </resources>
