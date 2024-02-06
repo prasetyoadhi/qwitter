@@ -40,6 +40,15 @@
 
           <q-item-section class="text-h6 text-weight-bold">Home</q-item-section>
         </q-item>
+        <q-item to="/employee" clickable v-ripple exact>
+          <q-item-section avatar>
+            <q-icon name="badge" size="md" />
+          </q-item-section>
+
+          <q-item-section class="text-h6 text-weight-bold"
+            >Employee</q-item-section
+          >
+        </q-item>
         <q-item to="/about" clickable v-ripple exact>
           <q-item-section avatar>
             <q-icon name="help" size="md" />
