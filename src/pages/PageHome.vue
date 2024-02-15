@@ -392,6 +392,7 @@ export default defineComponent({
         // Misalnya, kita anggap Ocr adalah objek yang memiliki metode detectText
         const data = await Ocr.detectText({ filename: this.image });
 
+        this.newQweetContent = "";
         for (let detection of data.textDetections) {
           this.newQweetContent += detection.text + "\n";
           console.log(detection.text);
