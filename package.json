@@ -13,15 +13,19 @@
     "build": "quasar build"
   },
   "dependencies": {
+    "@capacitor-community/image-to-text": "^5.0.3",
+    "@capacitor/camera": "^5.0.9",
     "@capacitor/cli": "^5.6.0",
     "@capacitor/core": "^5.6.0",
     "@capacitor/push-notifications": "^5.1.1",
+    "@ionic/pwa-elements": "^3.2.2",
     "@quasar/extras": "^1.16.4",
     "axios": "^1.2.1",
     "date-fns": "^3.3.1",
     "firebase": "^10.7.2",
     "pinia": "^2.0.11",
     "quasar": "^2.8.0",
+    "tesseract.js": "^5.0.4",
     "vue": "^3.2.29",
     "vue-router": "^4.0.12"
   },

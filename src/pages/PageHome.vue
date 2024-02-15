@@ -26,6 +26,14 @@
             round
             @click="registerNotifications"
           ></q-btn>
+          <q-btn
+            color="grey"
+            size="sm"
+            icon="fa-solid fa-camera"
+            flat
+            round
+            @click="captureImage"
+          ></q-btn>
         </div>
         <div class="col col-shrink">
           <q-btn
@@ -38,6 +46,11 @@
             class="q-mb-lg"
             @click="addNewQweet"
           />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <q-img :src="imageUrl" :ratio="16 / 9" />
         </div>
       </div>
 
@@ -132,13 +145,41 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { Camera, CameraResultType } from "@capacitor/camera";
+import { createWorker } from "tesseract.js";
+import { Ocr } from "@capacitor-community/image-to-text";
 
 export default defineComponent({
   name: "PageHome",
+  data() {
+    return {
+      email: "adhiprst@gmail.com",
+      newQweetContent: "",
+      qweets: [
+        // {
+        //   id: "ID1",
+        //   content:
+        //     "Life is change. Growth is optional. Choose wisely.\n\nKaren Clark, type.fit",
+        //   date: 1706770598526,
+        //   liked: true,
+        // },
+      ],
+      unsubscribe: null,
+      unsubscribeTokens: null,
+      registerNotifications: null,
+      addListeners: null,
+      pushToken: "",
+      notifications: [],
+      imageUrl: "https://picsum.photos/500/300",
+      image: null,
+    };
+  },
+
   created() {
     try {
       console.log("creating pagehome");
-      if (!this.$q.platform.is.android) return;
+      // console.log(this.$q.platform);
+      if (this.$q.platform.is.mobile) return;
 
       this.addListeners = async () => {
         // Listener untuk mendapatkan token registrasi
@@ -226,96 +267,6 @@ export default defineComponent({
       };
     } catch (e) {}
   },
-  data() {
-    return {
-      email: "adhiprst@gmail.com",
-      newQweetContent: "",
-      qweets: [
-        // {
-        //   id: "ID1",
-        //   content:
-        //     "Life is change. Growth is optional. Choose wisely.\n\nKaren Clark, type.fit",
-        //   date: 1706770598526,
-        //   liked: true,
-        // },
-        // {
-        //   id: "ID2",
-        //   content:
-        //     "Difficulties increase the nearer we get to the goal.\n\nJohann Wolfgang von Goethe, type.fit",
-        //   date: 1706770598526,
-        //   liked: true,
-        // },
-        // {
-        //   id: "ID3",
-        //   content:
-        //     "You can observe a lot just by watching.\n\nYogi Berra, type.fit",
-        //   date: 1706770598526,
-        //   liked: false,
-        // },
-        // {
-        //   id: "ID4",
-        //   content: "Well begun is half done.\n\nAristotle, type.fit",
-        //   date: 1706770598526,
-        //   liked: true,
-        // },
-        // {
-        //   id: "ID5",
-        //   content:
-        //     "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
-        //   date: 1706761859179,
-        //   liked: false,
-        // },
-        // {
-        //   id: "ID6",
-        //   content:
-        //     "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,",
-        //   date: 1706761896523,
-        //   liked: false,
-        // },
-      ],
-      unsubscribe: null,
-      unsubscribeTokens: null,
-      registerNotifications: null,
-      addListeners: null,
-      pushToken: "",
-      notifications: [],
-    };
-  },
-  methods: {
-    getRelativeDate(timestamp) {
-      return formatDistance(new Date(timestamp), new Date(), {
-        addSuffix: true,
-      });
-    },
-    async addNewQweet() {
-      let newQweet = {
-        content: this.newQweetContent,
-        date: Date.now(),
-        liked: false,
-      };
-      // this.qweets.unshift(newQweet);
-
-      const docRef = await addDoc(collection(db, "qweets"), newQweet);
-      console.log("Document written with ID: ", docRef.id);
-
-      this.newQweetContent = "";
-
-      // console.log(this.qweets);
-    },
-    async deleteQweet(qweet) {
-      await deleteDoc(doc(db, "qweets", qweet.id));
-
-      console.log("Document deleted with ID: ", qweet.id);
-    },
-    async toggleLiked(qweet) {
-      const qweetRef = doc(db, "qweets", qweet.id);
-      await updateDoc(qweetRef, {
-        liked: !qweet.liked,
-      });
-
-      console.log("Document updated with ID: ", qweet.id);
-    },
-  },
   mounted() {
     const q = query(collection(db, "qweets"), orderBy("date"));
     this.unsubscribe = onSnapshot(q, (snapshot) => {
@@ -323,7 +274,7 @@ export default defineComponent({
         let qweetChange = change.doc.data();
         qweetChange.id = change.doc.id;
         if (change.type === "added") {
-          console.log("New qweet: ", qweetChange);
+          // console.log("New qweet: ", qweetChange);
           qweetChange.content = qweetChange.content.replace(/\\n/g, "\n");
           this.qweets.unshift(qweetChange);
         }
@@ -346,8 +297,7 @@ export default defineComponent({
     });
 
     // push notif
-    if (!this.$q.platform.is.android) return;
-
+    if (this.$q.platform.is.chrome) return;
     this.addListeners();
   },
   unmounted() {
@@ -355,6 +305,101 @@ export default defineComponent({
     if (this.unsubscribe) {
       this.unsubscribe();
     }
+  },
+  methods: {
+    getRelativeDate(timestamp) {
+      return formatDistance(new Date(timestamp), new Date(), {
+        addSuffix: true,
+      });
+    },
+    async addNewQweet() {
+      let newQweet = {
+        content: this.newQweetContent,
+        date: Date.now(),
+        liked: false,
+      };
+      // this.qweets.unshift(newQweet);
+
+      const docRef = await addDoc(collection(db, "qweets"), newQweet);
+      console.log("Document written with ID: ", docRef.id);
+
+      this.newQweetContent = "";
+      this.imageUrl = "https://picsum.photos/500/300?t=" + Math.random();
+
+      // console.log(this.qweets);
+    },
+    async deleteQweet(qweet) {
+      await deleteDoc(doc(db, "qweets", qweet.id));
+
+      console.log("Document deleted with ID: ", qweet.id);
+    },
+    async toggleLiked(qweet) {
+      const qweetRef = doc(db, "qweets", qweet.id);
+      await updateDoc(qweetRef, {
+        liked: !qweet.liked,
+      });
+
+      console.log("Document updated with ID: ", qweet.id);
+    },
+    async captureImage() {
+      // console.log("launch camera");
+      // this.imageUrl = "https://picsum.photos/500/300?t=" + Math.random();
+
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.Uri,
+        // resultType: CameraResultType.Base64,
+        // resultType: CameraResultType.DataUrl,
+        saveToGallery: true,
+      });
+
+      console.log(image);
+
+      this.imageUrl = image.webPath;
+      if (image.path) this.image = image.path;
+
+      // this.imageUrl = `data:image/${image.format};base64,${image.base64String}`;
+      // this.imageUrl = image.dataUrl;
+      this.recognizeText2();
+    },
+    async recognizeText() {
+      try {
+        const worker = await createWorker("eng");
+        const {
+          data: { text },
+        } = await worker.recognize(this.imageUrl);
+        // this.newQweetContent = text;
+
+        const textRows = text.split("\n");
+
+        const idRegexNoPol = /[A-Z]{1,3}\s?\d{1,4}\s?[A-Z]{0,3}/g;
+        const textResult = textRows.filter((line) => idRegexNoPol.test(line));
+
+        if (textResult) {
+          this.newQweetContent = textResult.join("\n");
+        } else {
+          this.newQweetContent = text;
+        }
+        // console.log(text);
+        await worker.terminate();
+      } catch (error) {
+        console.error("Terjadi kesalahan:", error);
+      }
+    },
+    async recognizeText2() {
+      try {
+        // Misalnya, kita anggap Ocr adalah objek yang memiliki metode detectText
+        const data = await Ocr.detectText({ filename: this.image });
+
+        for (let detection of data.textDetections) {
+          this.newQweetContent += detection.text + "\n";
+          console.log(detection.text);
+        }
+      } catch (error) {
+        console.error("Terjadi kesalahan:", error);
+      }
+    },
   },
 });
 </script>
