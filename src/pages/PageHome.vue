@@ -34,6 +34,14 @@
             round
             @click="captureImage"
           ></q-btn>
+          <q-btn
+            color="grey"
+            size="sm"
+            icon="fa-solid fa-mobile"
+            flat
+            round
+            @click="getDeviceInfoLocal"
+          ></q-btn>
         </div>
         <div class="col col-shrink">
           <q-btn
@@ -148,12 +156,16 @@ import { PushNotifications } from "@capacitor/push-notifications";
 import { Camera, CameraResultType } from "@capacitor/camera";
 import { createWorker } from "tesseract.js";
 import { Ocr } from "@capacitor-community/image-to-text";
+import { Device } from "@capacitor/device";
+import { LocalStorage, SessionStorage } from "quasar";
+import { v4 as uuidv4 } from "uuid";
 
 export default defineComponent({
   name: "PageHome",
   data() {
     return {
       email: "adhiprst@gmail.com",
+      deviceId: "",
       newQweetContent: "",
       qweets: [
         // {
@@ -166,105 +178,25 @@ export default defineComponent({
       ],
       unsubscribe: null,
       unsubscribeTokens: null,
-      registerNotifications: null,
-      addListeners: null,
       pushToken: "",
       notifications: [],
       imageUrl: "https://picsum.photos/500/300",
       image: null,
     };
   },
-
   created() {
     try {
       console.log("creating pagehome");
       // console.log(this.$q.platform);
-      if (this.$q.platform.is.mobile) return;
+      // LocalStorage.remove("device");
 
-      this.addListeners = async () => {
-        // Listener untuk mendapatkan token registrasi
-        await PushNotifications.addListener("registration", async (token) => {
-          console.info("Registration token: ", token.value);
+      let device = LocalStorage.getItem("device");
+      console.log("Device : " + JSON.stringify(device));
 
-          let newToken = {
-            email: this.email,
-            token: token.value,
-            date: Date.now(),
-          };
-
-          const docRef = await addDoc(collection(db, "tokens"), newToken);
-          console.log("Document written with ID: ", docRef.id);
-
-          this.pushToken = token.value;
-        });
-
-        // Listener untuk menangani kesalahan registrasi
-        await PushNotifications.addListener("registrationError", (err) => {
-          console.error("Registration error: ", err.error);
-        });
-
-        // Listener untuk menangani notifikasi yang diterima
-        await PushNotifications.addListener(
-          "pushNotificationReceived",
-          (notification) => {
-            console.log("Push notification received: ", notification);
-            this.notifications.push(notification);
-          }
-        );
-
-        // Listener untuk menangani tindakan yang dilakukan pada notifikasi
-        await PushNotifications.addListener(
-          "pushNotificationActionPerformed",
-          (notification) => {
-            console.log(
-              "Push notification action performed",
-              JSON.stringify(notification)
-            );
-
-            if (this.notifications.length > 0) {
-              // Memanggil fungsi untuk menambahkan qweet
-
-              this.newQweetContent =
-                this.notifications[this.notifications.length - 1].body;
-
-              this.addNewQweet();
-            }
-          }
-        );
-      };
-
-      this.registerNotifications = async () => {
-        console.log("register notification");
-
-        const q = query(
-          collection(db, "tokens"),
-          where("email", "==", this.email)
-        );
-        const querySnapshot = await getDocs(q);
-        const filteredData = querySnapshot.docs
-          .filter((doc) => doc.data().email === this.email)
-          .map((doc) => doc.data());
-
-        console.log(JSON.stringify(filteredData));
-        if (filteredData.length == 0) {
-          let permStatus = await PushNotifications.checkPermissions();
-          if (permStatus.receive === "prompt") {
-            permStatus = await PushNotifications.requestPermissions();
-          }
-          if (permStatus.receive !== "granted") {
-            throw new Error("User denied permissions!");
-          }
-          await PushNotifications.register();
-        } else {
-          this.pushToken = filteredData[0].token;
-        }
-      };
-
-      this.getDeliveredNotifications = async () => {
-        const notificationList =
-          await PushNotifications.getDeliveredNotifications();
-        console.log("delivered notifications", notificationList);
-      };
+      if (device == undefined || device == null || device == {}) {
+        device = this.setDeviceInfo();
+        console.log("Device : " + JSON.stringify(device));
+      }
     } catch (e) {}
   },
   mounted() {
@@ -307,6 +239,117 @@ export default defineComponent({
     }
   },
   methods: {
+    async setDeviceInfo() {
+      // LocalStorage.remove("device");
+
+      let device = {};
+      if (this.$q.platform.is.chrome) {
+        let uniqueId = uuidv4();
+        device.id = uniqueId;
+        device.infoWeb = navigator.userAgent;
+      } else {
+        let deviceId = await Device.getId();
+        let deviceInfo = await Device.getInfo();
+        device.id = deviceId.identifier;
+        device.info = deviceInfo;
+      }
+
+      LocalStorage.set("device", device);
+
+      // console.log(JSON.stringify(device));
+      return device;
+    },
+    async getDeviceInfoLocal() {
+      // await this.setDeviceInfo();
+
+      let device = LocalStorage.getItem("device");
+      this.newQweetContent = "";
+      this.newQweetContent += device.id;
+
+      console.log("Device info : " + JSON.stringify(device));
+    },
+    async addListeners() {
+      // Listener untuk mendapatkan token registrasi
+      await PushNotifications.addListener("registration", async (token) => {
+        console.info("Registration token: ", token.value);
+
+        let newToken = {
+          email: this.email,
+          token: token.value,
+          date: Date.now(),
+        };
+
+        const docRef = await addDoc(collection(db, "tokens"), newToken);
+        console.log("Document written with ID: ", docRef.id);
+
+        this.pushToken = token.value;
+      });
+
+      // Listener untuk menangani kesalahan registrasi
+      await PushNotifications.addListener("registrationError", (err) => {
+        console.error("Registration error: ", err.error);
+      });
+
+      // Listener untuk menangani notifikasi yang diterima
+      await PushNotifications.addListener(
+        "pushNotificationReceived",
+        (notification) => {
+          console.log("Push notification received: ", notification);
+          this.notifications.push(notification);
+        }
+      );
+
+      // Listener untuk menangani tindakan yang dilakukan pada notifikasi
+      await PushNotifications.addListener(
+        "pushNotificationActionPerformed",
+        (notification) => {
+          console.log(
+            "Push notification action performed",
+            JSON.stringify(notification)
+          );
+
+          if (this.notifications.length > 0) {
+            // Memanggil fungsi untuk menambahkan qweet
+
+            this.newQweetContent =
+              this.notifications[this.notifications.length - 1].body;
+
+            this.addNewQweet();
+          }
+        }
+      );
+    },
+    async registerNotifications() {
+      console.log("register notification");
+
+      const q = query(
+        collection(db, "tokens"),
+        where("email", "==", this.email)
+      );
+      const querySnapshot = await getDocs(q);
+      const filteredData = querySnapshot.docs
+        .filter((doc) => doc.data().email === this.email)
+        .map((doc) => doc.data());
+
+      console.log(JSON.stringify(filteredData));
+      if (filteredData.length == 0) {
+        let permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive === "prompt") {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+        if (permStatus.receive !== "granted") {
+          throw new Error("User denied permissions!");
+        }
+        await PushNotifications.register();
+      } else {
+        this.pushToken = filteredData[0].token;
+      }
+    },
+    async getDeliveredNotifications() {
+      const notificationList =
+        await PushNotifications.getDeliveredNotifications();
+      console.log("delivered notifications", notificationList);
+    },
     getRelativeDate(timestamp) {
       return formatDistance(new Date(timestamp), new Date(), {
         addSuffix: true,
